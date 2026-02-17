@@ -1,5 +1,5 @@
-import pdf_reader as rdr
-import events_parser as psr
+from uni_scheduler import pdf_reader as rdr
+from uni_scheduler import events_parser as psr
 
 
 def main() -> None:
