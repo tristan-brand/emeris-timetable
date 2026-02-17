@@ -1,40 +1,69 @@
 from pathlib import Path
+import re
 import tabula
 import pandas as pd
 
 pdf_path = Path("./bin/resrc/timetable.pdf") # change to input
 
+def extract_tables(pdf_path: Path) -> list[pd.DataFrame]:
+    # Extract tables from PDF using tabula
+    try:
+        tables = tabula.read_pdf(
+            str(pdf_path),
+            pages="all",
+            multiple_tables=True,
+            lattice=True,
+            guess=False,
+        )
+        print(f"Extracted {len(tables)} tables from PDF.")
+        return tables
+    except Exception as e:
+        print(f"Error extracting tables from PDF: {e}")
+        return []
 
-def extract_timetable_section(df : pd.DataFrame) -> pd.DataFrame:
-    # Ensure column 0 is treated as string
-    col0 = df.iloc[:, 0].astype(str)
+def is_section_header(row: pd.Series) -> bool:
+    SECTION_LABEL_RE = re.compile(r"^\s*(Academic\s+Week\b.*|CATCH\s*UP\b.*|ASSESS\s+WEEK\b.*)\s*$",re.I,)
+    return any(SECTION_LABEL_RE.match(str(cell)) for cell in row)
 
-    # Find index where timetable begins
-    start_idx = col0.str.contains("Academic Week", case=False, na=False).idxmax()
+def is_timeslot_row(row: pd.Series) -> bool:
+    TIME_RE = re.compile(r"^\s*\d{1,2}H\d{2}\s*-\s*\d{1,2}H\d{2}\s*$|^\s*\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}\s*$",re.I,)
+    first = str(row.iloc[0]).strip() if len(row) > 0 else ""
+    return bool(TIME_RE.match(first))
 
-    # Slice from that row downward
-    return df.iloc[start_idx:].reset_index(drop=True)
+def extract_weeks(df: list[pd.DataFrame]) -> list[pd.DataFrame]:
+    header_indices = [i for i, row in df.iterrows() if is_section_header(row)]
+    if not header_indices:
+        return []
 
+    weeks: list[pd.DataFrame] = []
 
-# Extract all tables from all pages
-def extract_tables_from_pdf(pdf_path: Path) -> pd.DataFrame:
-    tables = tabula.read_pdf(
-        str(pdf_path),
-        pages="all",
-        multiple_tables=True,
-        lattice=True,
-        guess=False
-    )
+    for i, start in enumerate(header_indices):
+        end = header_indices[i + 1] if i + 1 < len(header_indices) else len(df)
+        block = df.iloc[start:end].reset_index(drop=True)
 
-    cleaned_tables = [extract_timetable_section(df) for df in tables]
-    combined = pd.concat(cleaned_tables, ignore_index=True)
+        if block.empty:
+            continue
 
-    combined.columns = combined.iloc[0]  # Set the first row as header
-    combined = combined[1:]  # Remove the header row from the data
-    combined.reset_index(drop=True, inplace=True)  # Reset index after removing header row
-    return combined
+        # Use section-header row as columns
+        block.columns = block.iloc[0]
+        block = block[1:].reset_index(drop=True)
 
+        # Keep timetable rows only
+        block = block[block.apply(is_timeslot_row, axis=1)].reset_index(drop=True)
 
+        if not block.empty:
+            # normalize en dash for downstream parsing
+            block.iloc[:, 0] = block.iloc[:, 0].astype(str).str.replace("–", "-", regex=False)
+            weeks.append(block)
+
+    return weeks
+
+def extract_schedule(tables : list[pd.DataFrame]) -> list[pd.DataFrame]:
+    all_weeks : list[pd.DataFrame] = []
+    for df in tables:
+        weeks = extract_weeks(df)
+        all_weeks.extend(weeks)
+    return all_weeks
 
 def get_modules_from_table(df : pd.DataFrame) -> list[str]:
     return df["MODULE CODE"].dropna().unique().tolist()

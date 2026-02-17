@@ -12,7 +12,6 @@ class Event:
 
 def extract_day_date(day_str: str) -> tuple[str, str]:
     # Example input: "Mon 1 Jan:
-    # print(repr(day_str))  # Debug statement to check the input format
     match = re.match(r"(\w+)\s+(\d{1,2}\s+\w+)", day_str)
     if match:
         return match.group(1), match.group(2)
@@ -21,11 +20,9 @@ def extract_day_date(day_str: str) -> tuple[str, str]:
 def parse_events(df : pd.DataFrame) -> list[Event]:
     events = []
     for col in df.columns[1:]:  # Skip the first column which is likely time
-        day = col
         for idx, cell in df[col].items():
             time_range = df.iloc[idx, 0]  # Assuming first column has time ranges
-            day, date = extract_day_date(day)
-            # print (f"Parsing cell: '{cell}' for time range: '{time_range}' on day: '{day}' and date: '{date}'")  # Debug statement
+            day, date = extract_day_date(col)
             event = parse_event(cell, time_range, day, date)
             if event is not None:
                 events.append(event)
