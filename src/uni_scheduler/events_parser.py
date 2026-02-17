@@ -1,6 +1,5 @@
 import re
 import pandas as pd
-from typing import List
 
 class Event:
     def __init__(self, name: str, location: str, day: str, date: str, start_time: str, end_time: str):
@@ -11,20 +10,21 @@ class Event:
         self.start_time = start_time
         self.end_time = end_time
 
-def extract_day_date(day_str: str) -> (str, str):
+def extract_day_date(day_str: str) -> tuple[str, str]:
     # Example input: "Mon 1 Jan:
     match = re.match(r"(\w+)\s+(\d{1,2}\s+\w+)", day_str)
     if match:
         return match.group(1), match.group(2)
     return day_str, ""  # Fallback if format is unexpected
 
-def parse_events(df : pd.DataFrame) -> List[Event]:
+def parse_events(df : pd.DataFrame) -> list[Event]:
+    events = []
     for col in df.columns[1:]:  # Skip the first column which is likely time
         day = col
         for idx, cell in df[col].iteritems():
             time_range = df.iloc[idx, 0]  # Assuming first column has time ranges
             day, date = extract_day_date(day)
-            event = parse_event(cell, time_range, day, df.index[idx])
+            event = parse_event(cell, time_range, day, date)
             if event is not None:
                 events.append(event)
     return events

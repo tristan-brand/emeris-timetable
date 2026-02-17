@@ -5,28 +5,29 @@ import pandas as pd
 pdf_path = Path("./bin/resrc/timetable.pdf") # change to input
 
 # Extract all tables from all pages
-tables = tabula.read_pdf(
-    str(pdf_path),
-    pages="all",
-    multiple_tables=True,
-    lattice=True,
-    guess=False
-)
+def extract_tables_from_pdf(pdf_path: Path) -> list[pd.DataFrame]:
+    return tabula.read_pdf(
+        str(pdf_path),
+        pages="all",
+        multiple_tables=True,
+        lattice=True,
+        guess=False
+    )
 
-df = tables[0]
-codes = df["MODULE CODE"].dropna().unique().tolist()
-print(codes)
-version_date = (
-    df.astype(str)
-      .stack()
-      .loc[lambda s: s.str.contains("LATEST VERSION", case=False)]
-      .str.extract(r"(\d{1,2}\s+[A-Z]{3})")
-      .iloc[0, 0]
-)
-print(version_date)
+def get_modules_from_table(df : pd.DataFrame) -> list[str]:
+    return df["MODULE CODE"].dropna().unique().tolist()
 
-codes = df["MODULE CODE"].dropna().unique().tolist()
-print(codes)
+def get_version(df : pd.DataFrame) -> str:
+
+    version_date = (
+        df.astype(str)
+        .stack()
+        .loc[lambda s: s.str.contains("LATEST VERSION", case=False)]
+        .str.extract(r"(\d{1,2}\s+[A-Z]{3})")
+        .iloc[0, 0]
+    )
+
+    return version_date
 
 def extract_timetable_section(df : pd.DataFrame) -> pd.DataFrame:
     # Ensure column 0 is treated as string
