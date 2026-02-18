@@ -1,7 +1,8 @@
-from uni_scheduler.event import Event
 from __future__ import annotations
 
+from uni_scheduler.event import Event
 from pathlib import Path
+from datetime import datetime
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -44,13 +45,31 @@ def get_calendar_service():
     return build("calendar", "v3", credentials=creds)
 
 
+def publish_events(events: list[Event]):
+    CALENDER_ID = "5fd290252a17d7f200dd40bebe24ba459d69a5eb863f00f1902c80f56c14f93b@group.calendar.google.com"
+    creds = get_google_credentials()
+    service = build("calendar", "v3", credentials=creds)
+    for event in events:
+        service.events().insert(calendarId=CALENDER_ID, body = event.to_google_event(year=datetime.now().year)).execute()
+        print(f"Published event: {event.title} on {event.date} at {event.start_time} in {event.location}")
+
+
 def smoke_test():
-    service = get_calendar_service()
-    # Simple non-destructive call
-    result = service.calendarList().list(maxResults=5).execute()
-    print("Connected. Calendars:")
-    for item in result.get("items", []):
-        print("-", item.get("summary"))
+    creds = get_google_credentials()
+    print("Credential scopes:", creds.scopes)
+    print("Credential valid:", creds.valid)
+    print("Credential expired:", creds.expired)
+    print("Has refresh token:", bool(creds.refresh_token))
+    service = build("calendar", "v3", credentials=creds)
+    # Non-destructive call that works with calendar.events scope
+    result = service.events().list(
+        calendarId="primary",
+        maxResults=5,
+        singleEvents=True,
+        orderBy="startTime",
+    ).execute()
+    print("Connected. Able to read events on primary calendar.")
+    print("Fetched events:", len(result.get("items", [])))
 
 
 if __name__ == "__main__":

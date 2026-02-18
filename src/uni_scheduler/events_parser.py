@@ -51,4 +51,4 @@ def parse_event(cell_text: str, time_range: str, day: str, date: str) -> Event:
     start_time, end_time = time_range.split('-')
 
 
-    return Event(name=name, location=location, day=day, date=date, start_time=start_time, end_time=end_time)
+    return Event(title=name, location=location, day=day, date=date, start_time=start_time, end_time=end_time)
