@@ -1,14 +1,7 @@
 import re
 import pandas as pd
+from uni_scheduler.event import Event
 
-class Event:
-    def __init__(self, name: str, location: str, day: str, date: str, start_time: str, end_time: str):
-        self.name = name
-        self.location = location
-        self.day = day
-        self.date = date
-        self.start_time = start_time
-        self.end_time = end_time
 
 def extract_day_date(day_str: str) -> tuple[str, str]:
     # Example input: "Mon 1 Jan:

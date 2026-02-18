@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+import shutil
 import tabula
 import pandas as pd
 
@@ -7,6 +8,10 @@ pdf_path = Path("./bin/resrc/timetable.pdf") # change to input
 
 def extract_tables(pdf_path: Path) -> list[pd.DataFrame]:
     # Extract tables from PDF using tabula
+    if shutil.which("java") is None:
+        print("Error extracting tables from PDF: Java runtime not found on PATH.")
+        return []
+
     try:
         tables = tabula.read_pdf(
             str(pdf_path),
@@ -14,11 +19,12 @@ def extract_tables(pdf_path: Path) -> list[pd.DataFrame]:
             multiple_tables=True,
             lattice=True,
             guess=False,
+            force_subprocess=True,
         )
         print(f"Extracted {len(tables)} tables from PDF.")
         return tables
     except Exception as e:
-        print(f"Error extracting tables from PDF: {e}")
+        print(f"Error extracting tables from PDF (subprocess mode): {e}")
         return []
 
 def is_section_header(row: pd.Series) -> bool:

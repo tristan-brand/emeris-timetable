@@ -10,6 +10,8 @@ packages = [{ include = "uni_scheduler", from = "src" }]
 python = ">=3.10,<3.14"
 pandas = "^2.2.0"
 tabula-py = "^2.9.0"
+google-api-python-client = "^2.169.0"
+google-auth-oauthlib = "^1.2.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
