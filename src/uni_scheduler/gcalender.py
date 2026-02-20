@@ -12,6 +12,9 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 CREDENTIALS_FILE = Path("bin/resrc/google_credentials.json")
 TOKEN_FILE = Path("bin/resrc/google_token.json")
 
+CALENDER_ID = "5fd290252a17d7f200dd40bebe24ba459d69a5eb863f00f1902c80f56c14f93b@group.calendar.google.com"
+
+
 
 def get_google_credentials(
     credentials_file: Path = CREDENTIALS_FILE,
@@ -46,13 +49,27 @@ def get_calendar_service():
 
 
 def publish_events(events: list[Event]):
-    CALENDER_ID = "5fd290252a17d7f200dd40bebe24ba459d69a5eb863f00f1902c80f56c14f93b@group.calendar.google.com"
     creds = get_google_credentials()
     service = build("calendar", "v3", credentials=creds)
     for event in events:
         service.events().insert(calendarId=CALENDER_ID, body = event.to_google_event(year=datetime.now().year)).execute()
         print(f"Published event: {event.title} on {event.date} at {event.start_time} in {event.location}")
 
+def sync(events: list[Event]):
+    creds = get_google_credentials()
+    service = build("calendar", "v3", credentials=creds)
+
+    # Fetch existing events from today onwards from calendar
+    now = datetime.now(datetime.timezone.utc).isoformat() + "Z"  # 'Z' indicates UTC time
+    existing_events_result = service.events().list(
+        calendarId=CALENDER_ID,
+        timeMin=now,
+        singleEvents=True,
+        orderBy="startTime",
+    ).execute()
+
+    existing_events = existing_events_result.get("items", [])
+    existing_events_map = {e["extendedProperties"]["private"]["source_id"]: e for e in existing_events if "extendedProperties" in e and "private" in e["extendedProperties"] and "source_id" in e["extendedProperties"]["private"]}
 
 def smoke_test():
     creds = get_google_credentials()

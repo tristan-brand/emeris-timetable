@@ -4,15 +4,29 @@ from uni_scheduler import gcalender as gcal
 
 
 def main() -> None:
-    timetables = rdr.extract_tables(rdr.pdf_path)
-    week_dfs = rdr.extract_schedule(timetables)
+    # sync_classes()
+    sync_assessments()
+
+def sync_classes():
+    tbls = rdr.extract_tables(rdr.class_pdf_path)
+
+    week_dfs = rdr.extract_classes(tbls)
     print(f"Extracted {len(week_dfs)} week DataFrames from PDF.")
+
     events = []
     for df in week_dfs:
-        events.extend(psr.parse_events(df))
+        events.extend(psr.parse_classes(df))
     print(f"Extracted {len(events)} events:")
 
     gcal.publish_events(events)
+
+def sync_assessments():
+    tbls = rdr.extract_tables_fallback(rdr.assess_pdf_path)
+
+    df = rdr.extract_assessments(tbls)
+
+    events = psr.parse_assessments(df)
+
 
 
 if __name__ == "__main__":
