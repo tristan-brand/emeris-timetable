@@ -80,3 +80,9 @@ output.xlsx
 # =========================
 google_credentials.json
 google_token.json
+
+# =========================
+# Other
+# =========================
+dist/
+bin/
