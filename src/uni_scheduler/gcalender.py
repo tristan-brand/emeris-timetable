@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+"""Google Calendar integration utilities for uni-scheduler.
+
+This module handles OAuth credential lifecycle and event publishing to a
+configured Google Calendar.
+"""
+
 from uni_scheduler.event import Event
 from pathlib import Path
 from datetime import datetime
@@ -20,6 +26,7 @@ def get_google_credentials(
     credentials_file: Path = CREDENTIALS_FILE,
     token_file: Path = TOKEN_FILE,
 ) -> Credentials:
+    """Load, refresh, or create OAuth credentials for Calendar API access."""
     creds = None
 
     # 1) Reuse prior token if present
@@ -44,18 +51,22 @@ def get_google_credentials(
 
 
 def get_calendar_service():
+    """Build and return an authenticated Google Calendar service client."""
     creds = get_google_credentials()
     return build("calendar", "v3", credentials=creds)
 
 
 def publish_events(events: list[Event]):
+    """Insert each `Event` in the target calendar as a new Google event."""
     creds = get_google_credentials()
     service = build("calendar", "v3", credentials=creds)
     for event in events:
+        # One insert call per event; no duplicate protection here.
         service.events().insert(calendarId=CALENDER_ID, body = event.to_google_event()).execute()
         print(f"Published event: {event.title} on {event.date} at {event.start_time} in {event.location}")
 
 def sync(events: list[Event]):
+    """Load upcoming events and build a source-id map for sync workflows."""
     creds = get_google_credentials()
     service = build("calendar", "v3", credentials=creds)
 
@@ -72,6 +83,7 @@ def sync(events: list[Event]):
     existing_events_map = {e["extendedProperties"]["private"]["source_id"]: e for e in existing_events if "extendedProperties" in e and "private" in e["extendedProperties"] and "source_id" in e["extendedProperties"]["private"]}
 
 def smoke_test():
+    """Run a minimal connectivity check against the Calendar API."""
     creds = get_google_credentials()
     print("Credential scopes:", creds.scopes)
     print("Credential valid:", creds.valid)
