@@ -8,7 +8,7 @@ def extract_date(date_str: str) -> str:
         dt = parser.parse(date_str, dayfirst=True)
         return dt.strftime("%Y-%m-%d")
     except (parser.ParserError, ValueError):
-        return date_str  # Return original if parsing fails
+        return None
 
 def parse_classes(df : pd.DataFrame) -> list[Event]:
     events = []
@@ -31,6 +31,9 @@ def parse_assessments(df : pd.DataFrame) -> list[Event]:
 
         title = f"{module}: {assessment_name}"
         date = extract_date(due_date)
+        if date is None:
+            print(f"Warning: Could not parse date '{due_date}' for assessment '{title}'. Skipping event creation.")
+            continue
         event = Event(title=title, location="N/A", date=date, start_time=due_time, end_time=due_time)
         events.append(event)
 
@@ -71,10 +74,20 @@ def parse_event(cell_text: str, time_range: str, date: str) -> Event:
 def smoke_test():
     sample_cell = "COMP1234 Room101"
     sample_time_range = "9H00 - 10H00"
-    sample_day = "Monday"
     sample_date = "1 Jan"
+    sample_date2 = "15 February"
+    sample_date3 = "31 Mar 2024"
+    sample_date4 = "InvalidDate"
 
-    event = parse_event(sample_cell, sample_time_range, sample_day, sample_date)
+    try :
+        print(extract_date(sample_date))  # Expected: "2024-01-01"
+        print(extract_date(sample_date2)) # Expected: "2024-02-15"
+        print(extract_date(sample_date3)) # Expected: "2024-03-31"
+        print(extract_date(sample_date4)) # Expected: "InvalidDate" (fallback to original)
+    except Exception as e:
+        print(f"Date parsing error: {e}")
+
+    event = parse_event(sample_cell, sample_time_range, sample_date)
     if event:
         print("Parsed Event:")
         print(f"Title: {event.title}")

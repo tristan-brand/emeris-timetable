@@ -52,7 +52,7 @@ def publish_events(events: list[Event]):
     creds = get_google_credentials()
     service = build("calendar", "v3", credentials=creds)
     for event in events:
-        service.events().insert(calendarId=CALENDER_ID, body = event.to_google_event(year=datetime.now().year)).execute()
+        service.events().insert(calendarId=CALENDER_ID, body = event.to_google_event()).execute()
         print(f"Published event: {event.title} on {event.date} at {event.start_time} in {event.location}")
 
 def sync(events: list[Event]):

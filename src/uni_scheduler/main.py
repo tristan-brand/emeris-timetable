@@ -1,6 +1,7 @@
 from uni_scheduler import pdf_reader as rdr
 from uni_scheduler import events_parser as psr
 from uni_scheduler import gcalender as gcal
+from uni_scheduler import event
 
 
 def main() -> None:
@@ -25,7 +26,9 @@ def sync_assessments():
 
     df = rdr.extract_assessments(tbls)
 
-    events = psr.parse_assessments(df)
+    events  = psr.parse_assessments(df)
+
+    gcal.publish_events(events)
 
 
 
