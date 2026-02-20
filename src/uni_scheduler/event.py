@@ -1,8 +1,17 @@
+"""Domain model for timetable/assessment events.
+
+`Event` instances are the internal representation used before transforming
+data into Google Calendar API payloads.
+"""
+
 from datetime import datetime
 import hashlib
 
 class Event:
+    """Represents a single scheduled item with date and time boundaries."""
+
     def __init__(self, title: str, location: str, date: str, start_time: str, end_time: str):
+        """Create an event from already-parsed text values."""
         self.title = title
         self.location = location
         self.date = date
@@ -10,6 +19,7 @@ class Event:
         self.end_time = end_time
 
     def to_google_event(self, timezone: str = "Africa/Johannesburg") -> dict:
+        """Convert this event into a Google Calendar `events.insert` payload."""
         start = self._norm_time(self.start_time)
         end = self._norm_time(self.end_time)
 
@@ -34,7 +44,7 @@ class Event:
 
     @staticmethod
     def _norm_time(t: str) -> str:
-        # Normalize time formats like "9H00" to "09:00"
+        """Normalize timetable-style time strings to 24-hour `HH:MM`."""
         t = t.strip().upper().replace("H", ":")
         if ":" not in t:
             t = f"{t}:00"
@@ -42,15 +52,10 @@ class Event:
         return f"{int(h):02d}:{int(m):02d}"
     
     def gen_source_id(self) -> str:
-        """
-        Generate a unique ID for the event based on its properties
-        
-        :param self: Event instance
-        :return: A unique string ID for the event
-        :rtype: str
-        """
+        """Generate a stable event fingerprint used for sync deduplication."""
         source_str = f"{self.title.strip().upper()}_{self.date}_{self.start_time}"
         return hashlib.sha256(source_str.encode()).hexdigest()[:20]
 
-def __str__(self):
-        return f"{self.title} at {self.location} on {self.day} {self.date} from {self.start_time} to {self.end_time}"
+    def __str__(self) -> str:
+        """Return a readable one-line representation of the event."""
+        return f"{self.title} at {self.location} on {self.date} from {self.start_time} to {self.end_time}"
