@@ -1,8 +1,8 @@
 ```bash
 git clone <repo>
-cd uni_scheduler
+cd emeris-timetable
 poetry install
-poetry run python src/uni_scheduler/main.py
+poetry run emeris-timetable
 ```
 
 To drop into the env

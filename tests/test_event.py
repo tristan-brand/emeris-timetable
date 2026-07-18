@@ -1,4 +1,4 @@
-from uni_scheduler.event import Event
+from emeris_timetable.event import Event
 
 
 def test_gen_source_id_is_deterministic_for_same_event_data():

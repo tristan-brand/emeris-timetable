@@ -1,9 +1,9 @@
 """CLI entrypoint for extracting timetable data and publishing to Google Calendar."""
 
-from uni_scheduler import pdf_reader as rdr
-from uni_scheduler import events_parser as psr
-from uni_scheduler import gcalender as gcal
-from uni_scheduler import event
+from emeris_timetable import pdf_reader as rdr
+from emeris_timetable import events_parser as psr
+from emeris_timetable import gcalender as gcal
+from emeris_timetable import event
 
 
 def main() -> None:

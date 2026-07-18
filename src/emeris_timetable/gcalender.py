@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-"""Google Calendar integration utilities for uni-scheduler.
+"""Google Calendar integration utilities for emeris-timetable.
 
 This module handles OAuth credential lifecycle and event publishing to a
 configured Google Calendar.
 """
 
-from uni_scheduler.event import Event
+from emeris_timetable.event import Event
 from pathlib import Path
 from datetime import datetime
 from google.auth.transport.requests import Request
