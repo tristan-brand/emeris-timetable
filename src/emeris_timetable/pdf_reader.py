@@ -35,6 +35,8 @@ def extract_tables(pdf_path: Path) -> list[pd.DataFrame]:
             force_subprocess=True,
         )
         print(f"Extracted {len(tables)} tables from PDF.")
+
+        return tables
     except Exception as e:
         print(f"Error extracting tables from PDF (subprocess mode): {e}")
         return []
