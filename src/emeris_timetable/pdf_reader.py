@@ -7,11 +7,13 @@ This module is responsible for:
 - and shaping assessment tables into a predictable dataframe format.
 """
 
-from pathlib import Path
 import re
 import shutil
-import tabula
+from pathlib import Path
+
 import pandas as pd
+import tabula
+
 
 def extract_tables(pdf_path: Path) -> list[pd.DataFrame]:
     """Extract all tables from a PDF using tabula.
@@ -34,7 +36,7 @@ def extract_tables(pdf_path: Path) -> list[pd.DataFrame]:
         )
         print(f"Extracted {len(tables)} tables from PDF.")
 
-        # output csv to file
+        # Keep extracted CSVs available for diagnosing PDF layout changes.
         for i, table in enumerate(tables):
             table.to_csv(f"./bin/extracted_tables/pas_table_{i}.csv", index=False)
         return tables
@@ -42,10 +44,12 @@ def extract_tables(pdf_path: Path) -> list[pd.DataFrame]:
         print(f"Error extracting tables from PDF (subprocess mode): {e}")
         return []
 
+
 def extract_tables_fallback(pdf_path: Path) -> list[pd.DataFrame]:
     """Fallback table extractor that uses Camelot lattice parsing."""
     try:
         import camelot
+
         tables = camelot.read_pdf(str(pdf_path), pages="all", flavor="lattice")
         print(f"Extracted {tables.n} tables from PDF using Camelot.")
         return [t.df for t in tables]
@@ -56,16 +60,24 @@ def extract_tables_fallback(pdf_path: Path) -> list[pd.DataFrame]:
 
 def is_section_header(row: pd.Series) -> bool:
     """Return True when a row contains a week/section heading label."""
-    SECTION_LABEL_RE = re.compile(r"^\s*(Academic\s+Week\b.*|CATCH\s*UP\b.*|ASSESS\s+WEEK\b.*)\s*$",re.I,)
-    return any(SECTION_LABEL_RE.match(str(cell)) for cell in row)
+    section_label_re = re.compile(
+        r"^\s*(Academic\s+Week\b.*|CATCH\s*UP\b.*|ASSESS\s+WEEK\b.*)\s*$",
+        re.I,
+    )
+    return any(section_label_re.match(str(cell)) for cell in row)
+
 
 def is_timeslot_row(row: pd.Series) -> bool:
     """Return True when the first cell looks like a timetable time range."""
-    TIME_RE = re.compile(r"^\s*\d{1,2}H\d{2}\s*-\s*\d{1,2}H\d{2}\s*$|^\s*\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}\s*$",re.I,)
+    time_re = re.compile(
+        r"^\s*\d{1,2}H\d{2}\s*-\s*\d{1,2}H\d{2}\s*$" r"|^\s*\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}\s*$",
+        re.I,
+    )
     first = str(row.iloc[0]).strip() if len(row) > 0 else ""
-    return bool(TIME_RE.match(first))
+    return bool(time_re.match(first))
 
-def extract_weeks(df: list[pd.DataFrame]) -> list[pd.DataFrame]:
+
+def extract_weeks(df: pd.DataFrame) -> list[pd.DataFrame]:
     """Split one extracted timetable table into normalized per-week dataframes."""
     header_indices = [i for i, row in df.iterrows() if is_section_header(row)]
     if not header_indices:
@@ -94,49 +106,53 @@ def extract_weeks(df: list[pd.DataFrame]) -> list[pd.DataFrame]:
 
     return weeks
 
-def extract_classes(tables : list[pd.DataFrame]) -> list[pd.DataFrame]:
+
+def extract_classes(tables: list[pd.DataFrame]) -> list[pd.DataFrame]:
     """Flatten all extracted tables into a single list of week dataframes."""
-    all_weeks : list[pd.DataFrame] = []
+    all_weeks: list[pd.DataFrame] = []
     for df in tables:
         weeks = extract_weeks(df)
         all_weeks.extend(weeks)
     return all_weeks
 
-def extract_assessments(tables : list[pd.DataFrame]) -> pd.DataFrame:
+
+def extract_assessments(tables: list[pd.DataFrame]) -> pd.DataFrame:
     """Convert extracted assessment tables into a standardized dataframe."""
     assessments = []
 
     for df in tables:
-        i = 0
         df.columns = df.iloc[0]
         df = df[1:].reset_index(drop=True)
 
         for _, row in df.iterrows():
-
             module = str(row["Module Code"]).strip().replace("\n", "")
             assessment_name = str(row["Assessment Name"]).strip().replace("\n", "")
             due_date = str(row["Assessment Date"]).strip().replace("\n", "")
             due_time = str(row["Assessment Time"]).strip().replace("\n", "")
 
-            i += 1
+            assessments.append(
+                {
+                    "MODULE": module,
+                    "ASSESSMENT": assessment_name,
+                    "DUE DATE": due_date,
+                    "DUE TIME": due_time,
+                }
+            )
 
-            assessments.append({
-                "MODULE": module,
-                "ASSESSMENT": assessment_name,
-                "DUE DATE": due_date,
-                "DUE TIME": due_time
-            })
-
-    assessments_df = pd.DataFrame(assessments, columns=["MODULE", "ASSESSMENT", "DUE DATE", "DUE TIME"])
+    assessments_df = pd.DataFrame(
+        assessments,
+        columns=["MODULE", "ASSESSMENT", "DUE DATE", "DUE TIME"],
+    )
 
     return assessments_df
 
 
-def get_modules_from_table(df : pd.DataFrame) -> list[str]:
+def get_modules_from_table(df: pd.DataFrame) -> list[str]:
     """Return distinct module codes from a normalized assessment dataframe."""
     return df["MODULE CODE"].dropna().unique().tolist()
 
-def get_version(df : pd.DataFrame) -> str:
+
+def get_version(df: pd.DataFrame) -> str:
     """Extract the version date (e.g. '04 FEB') from a table containing 'LATEST VERSION'."""
 
     version_date = (

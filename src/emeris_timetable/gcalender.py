@@ -1,17 +1,21 @@
-from __future__ import annotations
-
 """Google Calendar integration utilities for emeris-timetable.
 
 This module handles OAuth credential lifecycle and event publishing to a
 configured Google Calendar.
 """
 
-from .gauth import get_credentials
-from .event import Event, RemoteEvent
+from __future__ import annotations
+
 from datetime import datetime
+
 from googleapiclient.discovery import build
 
-CALENDER_ID = "5fd290252a17d7f200dd40bebe24ba459d69a5eb863f00f1902c80f56c14f93b@group.calendar.google.com"
+from .event import Event, RemoteEvent
+from .gauth import get_credentials
+
+CALENDAR_ID = (
+    "5fd290252a17d7f200dd40bebe24ba459d69a5eb863f00f1902c80f56c14f93b" "@group.calendar.google.com"
+)
 
 
 def get_calendar_service():
@@ -19,25 +23,30 @@ def get_calendar_service():
     creds = get_credentials()
     return build("calendar", "v3", credentials=creds)
 
+
 def publish(service, event: Event) -> RemoteEvent:
+    """Insert an event and return its local and remote representation."""
     resource = (
         service.events()
         .insert(
-            calendarId=CALENDER_ID,
+            calendarId=CALENDAR_ID,
             body=event.to_google(),
-        ).execute()
+        )
+        .execute()
     )
 
     return RemoteEvent(
         google_id=resource["id"],
         source_id=event.source_id,
-        event=event
+        event=event,
     )
 
+
 def delete(service, remote_event: RemoteEvent) -> None:
+    """Delete a previously persisted event from Google Calendar."""
     service.events().delete(
-        calendarId=CALENDER_ID,
-        eventId=remote_event.google_id
+        calendarId=CALENDAR_ID,
+        eventId=remote_event.google_id,
     ).execute()
 
 
@@ -46,7 +55,7 @@ def get_calendar_events(service, min_time: datetime) -> list[RemoteEvent]:
     result = (
         service.events()
         .list(
-            calendarId=CALENDER_ID,
+            calendarId=CALENDAR_ID,
             timeMin=min_time.isoformat(),
             singleEvents=True,
             privateExtendedProperty="sync_name=emeris-timetable",
@@ -70,18 +79,19 @@ def get_calendar_events(service, min_time: datetime) -> list[RemoteEvent]:
 
     return remote_events
 
+
 def smoke_test(service):
     """Run a minimal connectivity check against the Calendar API."""
     # Non-destructive call that works with calendar.events scope
-    result = service.events().list(
-        calendarId="primary",
-        maxResults=5,
-        singleEvents=True,
-        orderBy="startTime",
-    ).execute()
+    result = (
+        service.events()
+        .list(
+            calendarId="primary",
+            maxResults=5,
+            singleEvents=True,
+            orderBy="startTime",
+        )
+        .execute()
+    )
     print("Connected. Able to read events on primary calendar.")
     print("Fetched events:", len(result.get("items", [])))
-
-
-if __name__ == "__main__":
-    smoke_test()

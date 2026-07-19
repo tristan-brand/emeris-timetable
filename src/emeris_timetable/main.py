@@ -2,23 +2,21 @@
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from . import pdf_reader as rdr
+
 from . import events_parser as psr
 from . import gcalender as gcal
 from . import gmail as gm
+from . import pdf_reader as rdr
 from .event import Event
-from .event import RemoteEvent
 
 
 def main() -> None:
-    """Run the default sync flow.
-
-    Currently configured to sync classes only.
-    """
+    """Run the default class-timetable synchronization flow."""
     sync_classes()
-    # sync_assessments()
 
-def load_classes_from_import(service) -> list[Event]:
+
+def load_classes_from_import(service) -> list[Event] | None:
+    """Download and parse the newest unread timetable attachment."""
     message = gm.scan(service)
     if message is None:
         print("No unread messages found with the 'Emeris Timetable' label.")
@@ -32,20 +30,21 @@ def load_classes_from_import(service) -> list[Event]:
         gm.download_pdf_attachment(
             service,
             message_id,
-            pdf_path
+            pdf_path,
         )
 
         tbls = rdr.extract_tables(pdf_path)
         week_dfs = rdr.extract_classes(tbls)
         print(f"Extracted {len(week_dfs)} week DataFrames from PDF.")
 
-        events = []
+        events: list[Event] = []
         for df in week_dfs:
             events.extend(psr.parse_classes(df))
-        
+
         print(f"Extracted {len(events)} events:")
 
     return events
+
 
 def init_gmail_service():
     """Initialize and return the Gmail service client."""
@@ -56,6 +55,7 @@ def init_gmail_service():
         print(f"Failed to initialize Gmail service: {e}")
         return None
 
+
 def init_calendar_service():
     """Initialize and return the Google Calendar service client."""
     try:
@@ -65,8 +65,9 @@ def init_calendar_service():
         print(f"Failed to initialize Google Calendar service: {e}")
         return None
 
+
 def sync_classes():
-    """Extract class timetable events from PDF and publish them to Calendar."""
+    """Reconcile the latest emailed class timetable with Google Calendar."""
     gmail_service = init_gmail_service()
     calendar_service = init_calendar_service()
     if gmail_service is None or calendar_service is None:
@@ -85,20 +86,14 @@ def sync_classes():
         hour=0,
         minute=0,
         second=0,
-        microsecond=0
+        microsecond=0,
     )
 
     remote_events = gcal.get_calendar_events(calendar_service, min_time=start_time)
 
-    remote_by_source_id = {
-        item.source_id: item
-        for item in remote_events
-    }
+    remote_by_source_id = {item.source_id: item for item in remote_events}
 
-    desired_by_source_id = {
-        item.source_id: item
-        for item in parsed_events
-    }
+    desired_by_source_id = {item.source_id: item for item in parsed_events}
 
     additions = desired_by_source_id.keys() - remote_by_source_id.keys()
     removals = remote_by_source_id.keys() - desired_by_source_id.keys()
@@ -112,7 +107,7 @@ def sync_classes():
             f"at {event_to_add.start:%H:%M} "
             f"in {event_to_add.location}"
         )
-    
+
     for source_id in removals:
         google_event_to_remove = remote_by_source_id[source_id]
         gcal.delete(calendar_service, google_event_to_remove)
@@ -134,8 +129,3 @@ def sync_assessments() -> None:
 
     for assessment in events:
         gcal.publish(calendar_service, assessment)
-
-
-
-if __name__ == "__main__":
-    main()
