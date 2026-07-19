@@ -37,7 +37,7 @@ class Event:
             "extendedProperties": {
                 "private": {
                     "sync_name" : "uni_scheduler",
-                    "source_id": self.gen_source_id()
+                    "source_id": self.hash()
                 }
             }
         }
@@ -51,7 +51,7 @@ class Event:
         h, m = t.split(":")
         return f"{int(h):02d}:{int(m):02d}"
     
-    def gen_source_id(self) -> str:
+    def hash(self) -> str:
         """Generate a stable event fingerprint used for sync deduplication."""
         source_str = f"{self.title.strip().upper()}_{self.date}_{self.start_time}"
         return hashlib.sha256(source_str.encode()).hexdigest()[:20]
