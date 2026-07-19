@@ -12,7 +12,7 @@ APP_NAME = "emeris-timetable"
 
 SCOPES = [
     "https://www.googleapis.com/auth/calendar.events",
-    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.modify",
 ]
 
 CREDENTIALS_FILE = user_config_path(APP_NAME) / "google_credentials.json"
