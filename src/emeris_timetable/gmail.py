@@ -1,0 +1,110 @@
+import base64
+from collections.abc import Iterator
+from pathlib import Path
+from typing import Any
+from .gauth import get_credentials
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+def get_gmail_service():
+    """Build and return an authenticated Gmail service client."""
+    creds = get_credentials()
+    return build("gmail", "v1", credentials=creds)
+
+def get_label_id(service, label_name : str):
+    """Retrieve the ID of a Gmail label by its name."""
+    try:
+        results = service.users().labels().list(userId="me").execute()
+        labels = results.get("labels", [])
+        for label in labels:
+            if label["name"] == label_name:
+                return label["id"]
+    except HttpError as error:
+        print(f"An error occurred while fetching labels: {error}")
+    return None
+
+def iter_message_parts(part: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    """Yield every MIME part, including nested parts."""
+    yield part
+
+    for child in part.get("parts", []):
+        yield from iter_message_parts(child)
+
+def download_pdf_attachment(
+        service,
+        message_id: str,
+        destination: Path
+) -> Path:
+    """Download the first PDF attachment from a Gmail message."""
+    message = (
+        service.users()
+        .messages()
+        .get(userId="me", id=message_id, format="full")
+        .execute()
+    )
+
+    for part in iter_message_parts(message["payload"]):
+        filename = part.get("filename", "")
+        mime_type = part.get("mimeType", "")
+        body = part.get("body", {})
+
+        if mime_type != "application/pdf" and not filename.lower().endswith(".pdf"):
+            continue
+
+        if attachment_id := body.get("attachmentId"):
+            body = (
+                service.users()
+                .messages()
+                .attachments()
+                .get(
+                    userId="me",
+                    messageId=message_id,
+                    id=attachment_id,
+                )
+                .execute()
+            )
+
+        encoded_data = body.get("data")
+        if not encoded_data:
+            raise ValueError(f"PDF attachment has no data: {filename}")
+
+        destination.write_bytes(
+            base64.urlsafe_b64decode(encoded_data)
+        )
+        return destination
+    
+    raise ValueError("No PDF attachment found in the message.")
+
+def scan(service) -> Path:
+    """Scan Gmail for unread messages with the 'Emeris Timetable' label and download PDF attachments."""
+    label_id = get_label_id(service, "Emeris Timetable")
+
+    if not label_id:
+        print("Label 'Emeris Timetable' not found.")
+        return None
+
+    results = (
+        service.users()
+        .messages()
+        .list(
+            userId="me",
+            labelIds=[label_id],
+            q="is:unread",
+            maxResults=1
+        )
+        .execute()
+    )
+    messages = results.get("messages", [])
+
+    if not messages:
+        print('No unread messages found with the "Emeris Timetable" label.')
+        return None
+
+    else:
+        return messages[0] # Return the first unread message for further processing (e.g., downloading attachments).
+
+def smoke_test():
+    pass
+
+if __name__ == "__main__":
+    smoke_test()

@@ -1,61 +1,54 @@
-"""Domain model for timetable/assessment events.
-
-`Event` instances are the internal representation used before transforming
-data into Google Calendar API payloads.
-"""
-
+from dataclasses import dataclass
 from datetime import datetime
 import hashlib
+from typing import Any
 
+@dataclass(frozen=True)
 class Event:
-    """Represents a single scheduled item with date and time boundaries."""
 
-    def __init__(self, title: str, location: str, date: str, start_time: str, end_time: str):
-        """Create an event from already-parsed text values."""
-        self.title = title
-        self.location = location
-        self.date = date
-        self.start_time = start_time
-        self.end_time = end_time
+    title: str
+    location: str
+    start: datetime
+    end: datetime
 
-    def to_google_event(self, timezone: str = "Africa/Johannesburg") -> dict:
-        """Convert this event into a Google Calendar `events.insert` payload."""
-        start = self._norm_time(self.start_time)
-        end = self._norm_time(self.end_time)
+    @property
+    def source_id(self) -> str:
+        value = f"{self.title}|{self.start.isoformat()}"
+        return hashlib.sha256(value.encode()).hexdigest()[:20]
 
+    def to_google(self) -> dict[str, Any]:
         return {
             "summary": self.title,
             "location": self.location,
             "start": {
-                "dateTime": f"{self.date}T{start}:00",
-                "timeZone": timezone,
+                "dateTime": self.start.isoformat(),
+                "timeZone": "Africa/Johannesburg",
             },
             "end": {
-                "dateTime": f"{self.date}T{end}:00",
-                "timeZone": timezone,
+                "dateTime": self.end.isoformat(),
+                "timeZone": "Africa/Johannesburg",
             },
             "extendedProperties": {
                 "private": {
-                    "sync_name" : "uni_scheduler",
-                    "source_id": self.hash()
+                    "sync_name": "emeris-timetable",
+                    "source_id": self.source_id,
                 }
-            }
+            },
         }
 
-    @staticmethod
-    def _norm_time(t: str) -> str:
-        """Normalize timetable-style time strings to 24-hour `HH:MM`."""
-        t = t.strip().upper().replace("H", ":")
-        if ":" not in t:
-            t = f"{t}:00"
-        h, m = t.split(":")
-        return f"{int(h):02d}:{int(m):02d}"
-    
-    def hash(self) -> str:
-        """Generate a stable event fingerprint used for sync deduplication."""
-        source_str = f"{self.title.strip().upper()}_{self.date}_{self.start_time}"
-        return hashlib.sha256(source_str.encode()).hexdigest()[:20]
+    @classmethod
+    def from_google(cls, resource: dict[str, Any]) -> "Event":
+        return cls(
+            title=resource.get("summary", ""),
+            location=resource.get("location", ""),
+            start=datetime.fromisoformat(resource["start"]["dateTime"]),
+            end=datetime.fromisoformat(resource["end"]["dateTime"]),
+        )
 
-    def __str__(self) -> str:
-        """Return a readable one-line representation of the event."""
-        return f"{self.title} at {self.location} on {self.date} from {self.start_time} to {self.end_time}"
+@dataclass(frozen=True)
+class RemoteEvent:
+    google_id: str
+    source_id: str
+    event: Event
+
+
