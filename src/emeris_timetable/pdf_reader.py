@@ -13,12 +13,6 @@ import shutil
 import tabula
 import pandas as pd
 
-# Default source files used by the CLI flow.
-class_pdf_path = Path("./bin/resrc/timetable.pdf")  # change to input
-assess_pdf_path = Path("./bin/resrc/pas.pdf")  # change to input
-
-
-
 def extract_tables(pdf_path: Path) -> list[pd.DataFrame]:
     """Extract all tables from a PDF using tabula.
 
