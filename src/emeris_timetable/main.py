@@ -22,6 +22,13 @@ def load_classes_from_import(service) -> list[Event] | None:
         print("No unread messages found with the 'Emeris Timetable' label.")
         return None
 
+    # Set the message as read to avoid reprocessing it in future runs
+    service.users().messages().modify(
+        userId="me",
+        id=message["id"],
+        body={"removeLabelIds": ["UNREAD"]},
+    ).execute()
+
     message_id = message["id"]
 
     with TemporaryDirectory(prefix="emeris_timetable_") as temp_dir:
