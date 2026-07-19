@@ -35,11 +35,6 @@ def extract_tables(pdf_path: Path) -> list[pd.DataFrame]:
             force_subprocess=True,
         )
         print(f"Extracted {len(tables)} tables from PDF.")
-
-        # Keep extracted CSVs available for diagnosing PDF layout changes.
-        for i, table in enumerate(tables):
-            table.to_csv(f"./bin/extracted_tables/pas_table_{i}.csv", index=False)
-        return tables
     except Exception as e:
         print(f"Error extracting tables from PDF (subprocess mode): {e}")
         return []
