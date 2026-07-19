@@ -15,19 +15,13 @@ def main() -> None:
     sync_classes()
 
 
+
 def load_classes_from_import(service) -> list[Event] | None:
     """Download and parse the newest unread timetable attachment."""
     message = gm.scan(service)
     if message is None:
         print("No unread messages found with the 'Emeris Timetable' label.")
         return None
-
-    # Set the message as read to avoid reprocessing it in future runs
-    service.users().messages().modify(
-        userId="me",
-        id=message["id"],
-        body={"removeLabelIds": ["UNREAD"]},
-    ).execute()
 
     message_id = message["id"]
 
@@ -49,6 +43,9 @@ def load_classes_from_import(service) -> list[Event] | None:
             events.extend(psr.parse_classes(df))
 
         print(f"Extracted {len(events)} events:")
+
+        if events:
+            gm.mark_message_as_read(service, message_id)
 
     return events
 
@@ -73,7 +70,7 @@ def init_calendar_service():
         return None
 
 
-def sync_classes():
+def sync_classes() -> None:
     """Reconcile the latest emailed class timetable with Google Calendar."""
     gmail_service = init_gmail_service()
     calendar_service = init_calendar_service()

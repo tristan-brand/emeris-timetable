@@ -29,6 +29,28 @@ def get_label_id(service, label_name: str) -> str | None:
         print(f"An error occurred while fetching labels: {error}")
     return None
 
+def mark_message_as_read(service, message_id: str) -> None:
+    """Mark a Gmail message as read by removing the 'UNREAD' label."""
+    try:
+        service.users().messages().modify(
+            userId="me",
+            id=message_id,
+            body={"removeLabelIds": ["UNREAD"]},
+        ).execute()
+    except HttpError as error:
+        print(f"An error occurred while marking the message as read: {error}")
+
+def mark_message_as_unread(service, message_id: str) -> None:
+    """Mark a Gmail message as unread by adding the 'UNREAD' label."""
+    try:
+        service.users().messages().modify(
+            userId="me",
+            id=message_id,
+            body={"addLabelIds": ["UNREAD"]},
+        ).execute()
+    except HttpError as error:
+        print(f"An error occurred while marking the message as unread: {error}")
+
 
 def iter_message_parts(part: dict[str, Any]) -> Iterator[dict[str, Any]]:
     """Yield every MIME part, including nested parts."""
