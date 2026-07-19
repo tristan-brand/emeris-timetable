@@ -6,7 +6,7 @@ the Google Calendar sync layer.
 
 import re
 import pandas as pd
-from emeris_timetable.event import Event
+from .event import Event
 from dateutil import parser
 
 def extract_date(date_str: str) -> str:
