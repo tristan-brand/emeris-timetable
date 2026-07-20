@@ -93,6 +93,9 @@ Build the distribution:
 poetry build
 ```
 
+## Known Issues
+Class parsing incorrectly parses workshop class locations (with `WKSP` tag) as `WKSP` instead of location tag
+
 The tests mock Google API services and do not require credentials, network
 access, or changes to a real mailbox or calendar.
 
