@@ -99,12 +99,12 @@ def download_pdf_attachment(
     raise ValueError("No PDF attachment found in the message.")
 
 
-def scan(service) -> dict[str, Any] | None:
+def scan(service, source: str) -> dict[str, Any] | None:
     """Return the newest unread message carrying the timetable label."""
-    label_id = get_label_id(service, "Emeris Timetable")
+    label_id = get_label_id(service, f"Emeris {source}")
 
     if not label_id:
-        print("Label 'Emeris Timetable' not found.")
+        print(f"Label 'Emeris {source}' not found.")
         return None
 
     results = (
