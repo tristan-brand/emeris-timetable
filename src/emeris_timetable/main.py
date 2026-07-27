@@ -181,7 +181,6 @@ def sync_assessments(additions, desired, calendar_service) -> None:
     """Reconcile the latest emailed class timetable with Google Calendar."""
     for source_id in additions:
         event_to_add = desired[source_id]
-        # Debug: untoggle publish
         gcal.publish(calendar_service, event_to_add)
         print(
             f"Added event: {event_to_add.title} "

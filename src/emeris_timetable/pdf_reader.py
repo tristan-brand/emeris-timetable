@@ -49,19 +49,14 @@ def extract_tables_fallback(pdf_path: Path) -> list[pd.DataFrame]:
         import pdfplumber
 
         with pdfplumber.open(pdf_path) as pdf:
-            # Select the first page
-            first_page = pdf.pages[0]
-            
-            # Extract the table data as a list of lists
-            table_data = first_page.extract_table()
+            tbls: list[pd.DataFrame] = []
+            for page in pdf.pages:
+                table = page.extract_table()
+                if table:
+                    df = pd.DataFrame(table[1:], columns=table[0])
+                    tbls.append(df)
 
-            # TODO defend multi page
-
-            df = pd.DataFrame(table_data[1:], columns=table_data[0])
-            # TODO remove temp write to CSV
-            df.to_csv("extracted_table.csv", index=False)  # Save to CSV for inspection
-
-            return [df]
+            return tbls
 
     except Exception as e:
         print(f"Error extracting tables from PDF using Camelot: {e}")
@@ -131,9 +126,6 @@ def extract_assessments(tables: list[pd.DataFrame]) -> pd.DataFrame:
     assessments = []
 
     for df in tables:
-        # df.columns = df.iloc[0].str.strip().str.upper().str.replace("\n", "", regex=False)
-        # df = df[1:].reset_index(drop=True)
-
         for _, row in df.iterrows():
             module = str(row["Module Code"]).strip().replace("\n", "")
             assessment_name = str(row["Assessment Name"]).strip().replace("\n", "")
