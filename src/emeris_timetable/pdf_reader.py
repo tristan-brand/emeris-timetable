@@ -15,6 +15,7 @@ import pandas as pd
 import tabula
 
 
+
 def extract_tables(pdf_path: Path) -> list[pd.DataFrame]:
     """Extract all tables from a PDF using tabula.
 
@@ -45,11 +46,23 @@ def extract_tables(pdf_path: Path) -> list[pd.DataFrame]:
 def extract_tables_fallback(pdf_path: Path) -> list[pd.DataFrame]:
     """Fallback table extractor that uses Camelot lattice parsing."""
     try:
-        import camelot
+        import pdfplumber
 
-        tables = camelot.read_pdf(str(pdf_path), pages="all", flavor="lattice")
-        print(f"Extracted {tables.n} tables from PDF using Camelot.")
-        return [t.df for t in tables]
+        with pdfplumber.open(pdf_path) as pdf:
+            # Select the first page
+            first_page = pdf.pages[0]
+            
+            # Extract the table data as a list of lists
+            table_data = first_page.extract_table()
+
+            # TODO defend multi page
+
+            df = pd.DataFrame(table_data[1:], columns=table_data[0])
+            # TODO remove temp write to CSV
+            df.to_csv("extracted_table.csv", index=False)  # Save to CSV for inspection
+
+            return [df]
+
     except Exception as e:
         print(f"Error extracting tables from PDF using Camelot: {e}")
         return []
@@ -118,8 +131,8 @@ def extract_assessments(tables: list[pd.DataFrame]) -> pd.DataFrame:
     assessments = []
 
     for df in tables:
-        df.columns = df.iloc[0]
-        df = df[1:].reset_index(drop=True)
+        # df.columns = df.iloc[0].str.strip().str.upper().str.replace("\n", "", regex=False)
+        # df = df[1:].reset_index(drop=True)
 
         for _, row in df.iterrows():
             module = str(row["Module Code"]).strip().replace("\n", "")
@@ -127,6 +140,15 @@ def extract_assessments(tables: list[pd.DataFrame]) -> pd.DataFrame:
             due_date = str(row["Assessment Date"]).strip().replace("\n", "")
             due_time = str(row["Assessment Time"]).strip().replace("\n", "")
 
+            if (
+                not module
+                or not assessment_name
+                or not due_date
+                or module.lower() in ["nan", "tbc", "none"]
+                or assessment_name.lower() in ["nan", "tbc", "none"]
+                or due_date.lower() in ["nan", "tbc", "none"]
+            ):
+                continue
             assessments.append(
                 {
                     "MODULE": module,

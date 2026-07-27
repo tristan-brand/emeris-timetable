@@ -889,6 +889,22 @@ cryptography = ">=36.0.0"
 image = ["Pillow"]
 
 [[package]]
+name = "pdfplumber"
+version = "0.11.10"
+description = "Plumb a PDF for detailed information about each char, rectangle, and line."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pdfplumber-0.11.10-py3-none-any.whl", hash = "sha256:7741ea81bf165b474b153e6789d10d18e06b6ddcf3ec84289c3ef2fed6802580"},
+    {file = "pdfplumber-0.11.10.tar.gz", hash = "sha256:b95b2d28c66efb0a794a83b88c6c6aea5987532a445d20a1cbcfa657022e6e57"},
+]
+
+[package.dependencies]
+"pdfminer.six" = "20260107"
+Pillow = ">=12.2.0"
+pypdfium2 = ">=5.9.0"
+
+[[package]]
 name = "pillow"
 version = "12.3.0"
 description = "Python Imaging Library (fork)"
@@ -1454,4 +1470,4 @@ zstd = ["backports-zstd (>=1.0.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.14"
-content-hash = "a79d33a0955be9ec4909f11a5a3b2fbafb566d914fc9b3f29baa4b4afcd4acae"
+content-hash = "a1f3a7d04b9aed17246c1e04bbfecc4b44e762c15f5fc914941571a0c0b2f8be"

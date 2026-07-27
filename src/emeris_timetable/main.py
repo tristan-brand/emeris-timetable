@@ -59,8 +59,10 @@ def sync_events(source: str, gmail_service, calendar_service) -> None:
     additions = desired_by_source_id.keys() - remote_by_source_id.keys()
     removals = remote_by_source_id.keys() - desired_by_source_id.keys()
 
-    sync_classes(additions, removals, desired_by_source_id, remote_by_source_id, calendar_service)
-    sync_assessments(additions, desired_by_source_id, calendar_service)
+    if source == "Timetable":
+        sync_classes(additions, removals, desired_by_source_id, remote_by_source_id, calendar_service)
+    if source == "Assessments":
+        sync_assessments(additions, desired_by_source_id, calendar_service)
 
 def load_events(service, source: str) -> list[Event] | None:
     """Download and parse the newest unread attachment."""
@@ -69,10 +71,14 @@ def load_events(service, source: str) -> list[Event] | None:
         raise ValueError(f"Unknown source: {source}")
 
     message = load_message(service, source)
-    if message is not None:
-        gm.mark_message_as_read(service, message["id"])
+    if message is None:
+        return None
+
     payload = extract_payload(service, message["id"], source)
     events = process_events(payload, source)
+
+    if events:
+        gm.mark_message_as_read(service, message["id"])
 
     return events
 
@@ -148,8 +154,6 @@ def init_calendar_service():
         return None
 
 
-
-
 def sync_classes(additions, removals, desired, remote, calendar_service) -> None:
     """Reconcile the latest emailed class timetable with Google Calendar."""
     for source_id in additions:
@@ -178,10 +182,13 @@ def sync_assessments(additions, desired, calendar_service) -> None:
     for source_id in additions:
         event_to_add = desired[source_id]
         # Debug: untoggle publish
-        # gcal.publish(calendar_service, event_to_add)
+        gcal.publish(calendar_service, event_to_add)
         print(
             f"Added event: {event_to_add.title} "
             f"on {event_to_add.start:%Y-%m-%d} "
             f"at {event_to_add.start:%H:%M} "
             f"in {event_to_add.location}"
         )
+
+if __name__ == "__main__":
+    main()
