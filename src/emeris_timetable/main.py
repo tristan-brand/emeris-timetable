@@ -21,8 +21,18 @@ def main() -> None:
     parser.add_argument("-c", "--classes", action="store_true", help="Sync class events")
     parser.add_argument("-a", "--assessments", action="store_true", help="Sync assessment events")
 
-
     args = parser.parse_args()
+
+    gmail_service = init_gmail_service()
+    if gmail_service is None:
+        print("Failed to initialize Gmail service. Exiting.")
+        return
+    calendar_service = init_calendar_service()
+    if calendar_service is None:
+        print("Failed to initialize Google Calendar service. Exiting.")
+        return
+
+    sync_events(args, gmail_service, calendar_service)
 
     if args.assessments:
         sync_assessments()
@@ -145,47 +155,33 @@ def init_calendar_service():
         print(f"Failed to initialize Google Calendar service: {e}")
         return None
 
-def fetch_remote_events(start_time, service, source: str) -> list[Event] | None:
-    """Fetch events from Google Calendar starting from the earliest event in the provided list of parsed events."""
-    return gcal.get_calendar_events(service, min_time=start_time)
+def sync_events(source: str, gmail_service, calendar_service) -> None:
+    """Sync events based on the provided arguments."""
 
-def sync_events(source: str) -> None:
-
-
-def sync_classes() -> None:
-    """Reconcile the latest emailed class timetable with Google Calendar."""
-    gmail_service = init_gmail_service()
-    calendar_service = init_calendar_service()
-    if gmail_service is None or calendar_service is None:
-        print("One or more required services failed to initialize. Exiting sync_classes.")
+    parsed_events = load_events(gmail_service, source)
+    if parsed_events is None or len(parsed_events) == 0:
+        print(f"No new {source.lower()} events to sync. Exiting.")
         return
 
-    parsed_classes = load_events(gmail_service, "Timetable")
-
-    if parsed_classes is None or len(parsed_classes) == 0:
-        print("No new events to sync. Exiting.")
-        return
-
-    first_class = min(event.start for event in parsed_classes)
-
-    start_time = first_class.replace(
-        hour=0,
-        minute=0,
-        second=0,
-        microsecond=0,
-    )
+    first_event = min(event.start for event in parsed_events)
+    start_time = first_event.replace(hour=0, minute=0, second=0, microsecond=0)
 
     remote_events = gcal.get_calendar_events(calendar_service, min_time=start_time)
 
     remote_by_source_id = {item.source_id: item for item in remote_events}
-
-    desired_by_source_id = {item.source_id: item for item in parsed_classes}
+    desired_by_source_id = {item.source_id: item for item in parsed_events}
 
     additions = desired_by_source_id.keys() - remote_by_source_id.keys()
     removals = remote_by_source_id.keys() - desired_by_source_id.keys()
 
+    sync_classes(additions, removals, desired_by_source_id, remote_by_source_id, calendar_service)
+    sync_assessments(additions, desired_by_source_id, calendar_service)
+
+
+def sync_classes(additions, removals, desired, remote, calendar_service) -> None:
+    """Reconcile the latest emailed class timetable with Google Calendar."""
     for source_id in additions:
-        event_to_add = desired_by_source_id[source_id]
+        event_to_add = desired[source_id]
         gcal.publish(calendar_service, event_to_add)
         print(
             f"Added event: {event_to_add.title} "
@@ -195,7 +191,7 @@ def sync_classes() -> None:
         )
 
     for source_id in removals:
-        google_event_to_remove = remote_by_source_id[source_id]
+        google_event_to_remove = remote[source_id]
         gcal.delete(calendar_service, google_event_to_remove)
         print(
             f"Removed event: {google_event_to_remove.event.title} "
@@ -203,39 +199,10 @@ def sync_classes() -> None:
         )
 
 
-def sync_assessments() -> None:
+def sync_assessments(additions, desired, calendar_service) -> None:
     """Reconcile the latest emailed class timetable with Google Calendar."""
-    gmail_service = init_gmail_service()
-    calendar_service = init_calendar_service()
-    if gmail_service is None or calendar_service is None:
-        print("One or more required services failed to initialize. Exiting sync_classes.")
-        return
-
-    parsed_assessments = load_events(gmail_service, "Assessments")
-
-    if parsed_assessments is None or len(parsed_assessments) == 0:
-        print("No new events to sync. Exiting.")
-        return
-
-    first_assessment = min(event.start for event in parsed_assessments)
-
-    start_time = first_assessment.replace(
-        hour=0,
-        minute=0,
-        second=0,
-        microsecond=0,
-    )
-
-    remote_events = gcal.get_calendar_events(calendar_service, min_time=start_time)
-
-    remote_by_source_id = {item.source_id: item for item in remote_events}
-
-    desired_by_source_id = {item.source_id: item for item in parsed_assessments}
-
-    additions = desired_by_source_id.keys() - remote_by_source_id.keys()
-
     for source_id in additions:
-        event_to_add = desired_by_source_id[source_id]
+        event_to_add = desired[source_id]
         # gcal.publish(calendar_service, event_to_add)
         print(
             f"Added event: {event_to_add.title} "
