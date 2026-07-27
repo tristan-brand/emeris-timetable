@@ -32,16 +32,39 @@ def main() -> None:
         print("Failed to initialize Google Calendar service. Exiting.")
         return
 
-    sync_events(args, gmail_service, calendar_service)
+    # TODO handle the case where both classes and assessments are requested
+    source = "Timetable" if args.classes else "Assessments" if args.assessments else None
+    if source is None:
+        print("No source specified. Use --classes or --assessments.")
+        return
 
-    if args.assessments:
-        sync_assessments()
-    if args.classes:
-        # sync_classes()
-        print("debug sync_classes() is commented out for testing purposes.")
+    sync_events(source, gmail_service, calendar_service)
+
+def sync_events(source: str, gmail_service, calendar_service) -> None:
+    """Sync events based on the provided arguments."""
+
+    parsed_events = load_events(gmail_service, source)
+    if parsed_events is None or len(parsed_events) == 0:
+        print(f"No new {source.lower()} events to sync. Exiting.")
+        return
+
+    first_event = min(event.start for event in parsed_events)
+    start_time = first_event.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    remote_events = gcal.get_calendar_events(calendar_service, min_time=start_time)
+
+    remote_by_source_id = {item.source_id: item for item in remote_events}
+    desired_by_source_id = {item.source_id: item for item in parsed_events}
+
+    additions = desired_by_source_id.keys() - remote_by_source_id.keys()
+    removals = remote_by_source_id.keys() - desired_by_source_id.keys()
+
+    sync_classes(additions, removals, desired_by_source_id, remote_by_source_id, calendar_service)
+    sync_assessments(additions, desired_by_source_id, calendar_service)
 
 def load_events(service, source: str) -> list[Event] | None:
     """Download and parse the newest unread attachment."""
+
     if source not in ["Timetable", "Assessments"]:
         raise ValueError(f"Unknown source: {source}")
 
@@ -55,6 +78,7 @@ def load_events(service, source: str) -> list[Event] | None:
 
 def load_message(service, source: str) -> dict[str, any] | None:
     """Return the newest unread message carrying the timetable label."""
+
     message = gm.scan(service, source)
     if message is None:
         print(f"No unread messages found with the 'Emeris {source}' label for source '{source}'.")
@@ -64,6 +88,7 @@ def load_message(service, source: str) -> dict[str, any] | None:
 
 def extract_payload(service, message_id: str, source: str) -> list[DataFrame] | None:
     """Download and parse the newest unread attachment."""
+
     with TemporaryDirectory(prefix="emeris_timetable_") as temp_dir:
         pdf_path = Path(temp_dir) / "attachment.pdf"
 
@@ -78,6 +103,7 @@ def extract_payload(service, message_id: str, source: str) -> list[DataFrame] | 
 
 def process_events(tbls: list[DataFrame], source: str) -> list[Event]:
     """Process the extracted tables into a list of events."""
+
     if source == "Timetable":
         week_dfs = rdr.extract_classes(tbls)
         print(f"Extracted {len(week_dfs)} week DataFrames from PDF.")
@@ -102,40 +128,6 @@ def process_events(tbls: list[DataFrame], source: str) -> list[Event]:
         raise ValueError(f"Unknown source: {source}")
 
 
-def load_classes_from_import(service) -> list[Event] | None:
-    """Download and parse the newest unread timetable attachment."""
-    message = gm.scan(service)
-    if message is None:
-        print("No unread messages found with the 'Emeris Timetable' label.")
-        return None
-
-    message_id = message["id"]
-
-    with TemporaryDirectory(prefix="emeris_timetable_") as temp_dir:
-        pdf_path = Path(temp_dir) / "timetable.pdf"
-
-        gm.download_pdf_attachment(
-            service,
-            message_id,
-            pdf_path,
-        )
-
-        tbls = rdr.extract_tables(pdf_path)
-        week_dfs = rdr.extract_classes(tbls)
-        print(f"Extracted {len(week_dfs)} week DataFrames from PDF.")
-
-        events: list[Event] = []
-        for df in week_dfs:
-            events.extend(psr.parse_classes(df))
-
-        print(f"Extracted {len(events)} events:")
-
-        if events:
-            gm.mark_message_as_read(service, message_id)
-
-    return events
-
-
 def init_gmail_service():
     """Initialize and return the Gmail service client."""
     try:
@@ -155,27 +147,7 @@ def init_calendar_service():
         print(f"Failed to initialize Google Calendar service: {e}")
         return None
 
-def sync_events(source: str, gmail_service, calendar_service) -> None:
-    """Sync events based on the provided arguments."""
 
-    parsed_events = load_events(gmail_service, source)
-    if parsed_events is None or len(parsed_events) == 0:
-        print(f"No new {source.lower()} events to sync. Exiting.")
-        return
-
-    first_event = min(event.start for event in parsed_events)
-    start_time = first_event.replace(hour=0, minute=0, second=0, microsecond=0)
-
-    remote_events = gcal.get_calendar_events(calendar_service, min_time=start_time)
-
-    remote_by_source_id = {item.source_id: item for item in remote_events}
-    desired_by_source_id = {item.source_id: item for item in parsed_events}
-
-    additions = desired_by_source_id.keys() - remote_by_source_id.keys()
-    removals = remote_by_source_id.keys() - desired_by_source_id.keys()
-
-    sync_classes(additions, removals, desired_by_source_id, remote_by_source_id, calendar_service)
-    sync_assessments(additions, desired_by_source_id, calendar_service)
 
 
 def sync_classes(additions, removals, desired, remote, calendar_service) -> None:
