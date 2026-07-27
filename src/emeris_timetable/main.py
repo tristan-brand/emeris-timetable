@@ -154,7 +154,8 @@ def sync_classes(additions, removals, desired, remote, calendar_service) -> None
     """Reconcile the latest emailed class timetable with Google Calendar."""
     for source_id in additions:
         event_to_add = desired[source_id]
-        gcal.publish(calendar_service, event_to_add)
+        # Debug: untoggle publish
+        # gcal.publish(calendar_service, event_to_add)
         print(
             f"Added event: {event_to_add.title} "
             f"on {event_to_add.start:%Y-%m-%d} "
@@ -164,7 +165,8 @@ def sync_classes(additions, removals, desired, remote, calendar_service) -> None
 
     for source_id in removals:
         google_event_to_remove = remote[source_id]
-        gcal.delete(calendar_service, google_event_to_remove)
+        # Debug: untoggle delete
+        # gcal.delete(calendar_service, google_event_to_remove)
         print(
             f"Removed event: {google_event_to_remove.event.title} "
             f"| id: {google_event_to_remove.google_id}"
@@ -175,6 +177,7 @@ def sync_assessments(additions, desired, calendar_service) -> None:
     """Reconcile the latest emailed class timetable with Google Calendar."""
     for source_id in additions:
         event_to_add = desired[source_id]
+        # Debug: untoggle publish
         # gcal.publish(calendar_service, event_to_add)
         print(
             f"Added event: {event_to_add.title} "
