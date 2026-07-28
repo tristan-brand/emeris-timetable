@@ -154,6 +154,7 @@ def init_calendar_service():
         return None
 
 
+# TODO solve class sync removing assessments
 def sync_classes(additions, removals, desired, remote, calendar_service) -> None:
     """Reconcile the latest emailed class timetable with Google Calendar."""
     for source_id in additions:
