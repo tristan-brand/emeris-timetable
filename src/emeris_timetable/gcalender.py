@@ -13,6 +13,8 @@ from googleapiclient.discovery import build
 from .event import Event, RemoteEvent
 from .gauth import get_credentials
 
+from .main import TIMETABLE_SRC, ASSESSMENTS_SRC
+
 TIMETABLE_CALENDAR_ID = (
     "5fd290252a17d7f200dd40bebe24ba459d69a5eb863f00f1902c80f56c14f93b" "@group.calendar.google.com"
 )
@@ -30,9 +32,9 @@ def get_calendar_service():
 
 def publish(service, source: str, event: Event) -> RemoteEvent:
     """Insert an event and return its local and remote representation."""
-    if source == "timetable":
+    if source == TIMETABLE_SRC:
         calendar_id = TIMETABLE_CALENDAR_ID
-    elif source == "assessments":
+    elif source == ASSESSMENTS_SRC:
         calendar_id = ASSESSMENT_CALENDAR_ID
     else:
         raise ValueError(f"Unknown source: {source}")
@@ -53,10 +55,17 @@ def publish(service, source: str, event: Event) -> RemoteEvent:
     )
 
 
-def delete(service, remote_event: RemoteEvent) -> None:
+def delete(service, source: str, remote_event: RemoteEvent) -> None:
     """Delete a previously persisted event from Google Calendar."""
+    if source == TIMETABLE_SRC:
+        calendar_id = TIMETABLE_CALENDAR_ID
+    elif source == ASSESSMENTS_SRC:
+        calendar_id = ASSESSMENT_CALENDAR_ID
+    else:
+        raise ValueError(f"Unknown source: {source}")
+
     service.events().delete(
-        calendarId=TIMETABLE_CALENDAR_ID,
+        calendarId=calendar_id,
         eventId=remote_event.google_id,
     ).execute()
 
