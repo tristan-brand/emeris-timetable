@@ -34,6 +34,7 @@ def test_publish_returns_remote_event():
     )
 
 
+# TODO fix the tests below to use the new source parameter in publish() and delete() functions
 def test_delete_uses_google_event_id():
     service = Mock()
     event = make_event()

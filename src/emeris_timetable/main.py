@@ -172,7 +172,7 @@ def sync_classes(additions, removals, desired, remote, calendar_service) -> None
 
     for source_id in removals:
         google_event_to_remove = remote[source_id]
-        gcal.delete(calendar_service, google_event_to_remove)
+        gcal.delete(calendar_service, source=TIMETABLE_SRC, remote_event=google_event_to_remove)
         print(
             f"Removed event: {google_event_to_remove.event.title} "
             f"| id: {google_event_to_remove.google_id}"
