@@ -13,8 +13,12 @@ from googleapiclient.discovery import build
 from .event import Event, RemoteEvent
 from .gauth import get_credentials
 
-CALENDAR_ID = (
+TIMETABLE_CALENDAR_ID = (
     "5fd290252a17d7f200dd40bebe24ba459d69a5eb863f00f1902c80f56c14f93b" "@group.calendar.google.com"
+)
+
+ASSESSMENT_CALENDAR_ID = (
+    "e285cebe302c2da01e0e66e41a25d71c65e7fa6af80ddc3cfebda6bc83589fbb@group.calendar.google.com"
 )
 
 
@@ -29,7 +33,7 @@ def publish(service, event: Event) -> RemoteEvent:
     resource = (
         service.events()
         .insert(
-            calendarId=CALENDAR_ID,
+            calendarId=TIMETABLE_CALENDAR_ID,
             body=event.to_google(),
         )
         .execute()
@@ -45,7 +49,7 @@ def publish(service, event: Event) -> RemoteEvent:
 def delete(service, remote_event: RemoteEvent) -> None:
     """Delete a previously persisted event from Google Calendar."""
     service.events().delete(
-        calendarId=CALENDAR_ID,
+        calendarId=TIMETABLE_CALENDAR_ID,
         eventId=remote_event.google_id,
     ).execute()
 
@@ -55,7 +59,7 @@ def get_calendar_events(service, min_time: datetime) -> list[RemoteEvent]:
     result = (
         service.events()
         .list(
-            calendarId=CALENDAR_ID,
+            calendarId=TIMETABLE_CALENDAR_ID,
             timeMin=min_time.isoformat(),
             singleEvents=True,
             privateExtendedProperty="sync_name=emeris-timetable",

@@ -5,7 +5,7 @@ from unittest.mock import Mock
 from zoneinfo import ZoneInfo
 
 from emeris_timetable.event import Event, RemoteEvent
-from emeris_timetable.gcalender import CALENDAR_ID, delete, get_calendar_events, publish
+from emeris_timetable.gcalender import TIMETABLE_CALENDAR_ID, delete, get_calendar_events, publish
 
 TIMEZONE = ZoneInfo("Africa/Johannesburg")
 
@@ -29,7 +29,7 @@ def test_publish_returns_remote_event():
 
     assert remote == RemoteEvent("remote-1", event.source_id, event)
     service.events.return_value.insert.assert_called_once_with(
-        calendarId=CALENDAR_ID,
+        calendarId=TIMETABLE_CALENDAR_ID,
         body=event.to_google(),
     )
 
@@ -42,7 +42,7 @@ def test_delete_uses_google_event_id():
     delete(service, remote)
 
     service.events.return_value.delete.assert_called_once_with(
-        calendarId=CALENDAR_ID,
+        calendarId=TIMETABLE_CALENDAR_ID,
         eventId="remote-1",
     )
 
@@ -72,7 +72,7 @@ def test_get_calendar_events_converts_google_resources():
 
     assert remote_events == [RemoteEvent("remote-1", event.source_id, event)]
     service.events.return_value.list.assert_called_once_with(
-        calendarId=CALENDAR_ID,
+        calendarId=TIMETABLE_CALENDAR_ID,
         timeMin="2026-07-20T09:00:00+02:00",
         singleEvents=True,
         privateExtendedProperty="sync_name=emeris-timetable",
