@@ -70,12 +70,19 @@ def delete(service, source: str, remote_event: RemoteEvent) -> None:
     ).execute()
 
 
-def get_calendar_events(service, min_time: datetime) -> list[RemoteEvent]:
+def get_calendar_events(service, source: str, min_time: datetime) -> list[RemoteEvent]:
     """Fetch managed events beginning at min_time."""
+    if source == TIMETABLE_SRC:
+        calendar_id = TIMETABLE_CALENDAR_ID
+    elif source == ASSESSMENTS_SRC:
+        calendar_id = ASSESSMENT_CALENDAR_ID
+    else:
+        raise ValueError(f"Unknown source: {source}")
+
     result = (
         service.events()
         .list(
-            calendarId=TIMETABLE_CALENDAR_ID,
+            calendarId=calendar_id,
             timeMin=min_time.isoformat(),
             singleEvents=True,
             privateExtendedProperty="sync_name=emeris-timetable",
