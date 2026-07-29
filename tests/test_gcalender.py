@@ -19,7 +19,7 @@ def make_event() -> Event:
         end=datetime(2026, 7, 20, 10, 0, tzinfo=TIMEZONE),
     )
 
-
+# TODO fix the tests below to use the new source parameter in publish() and delete() functions
 def test_publish_returns_remote_event():
     service = Mock()
     service.events.return_value.insert.return_value.execute.return_value = {"id": "remote-1"}
