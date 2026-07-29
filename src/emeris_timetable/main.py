@@ -12,6 +12,9 @@ from . import gmail as gm
 from . import pdf_reader as rdr
 from .event import Event
 
+TIMETABLE_SRC = "Timetable"
+ASSESSMENTS_SRC = "Assessments"
+
 
 def main() -> None:
     """Run the default class-timetable synchronization flow."""
@@ -33,7 +36,7 @@ def main() -> None:
         return
 
     # TODO handle the case where both classes and assessments are requested
-    source = "Timetable" if args.classes else "Assessments" if args.assessments else None
+    source = TIMETABLE_SRC if args.classes else ASSESSMENTS_SRC if args.assessments else None
     if source is None:
         print("No source specified. Use --classes or --assessments.")
         return
@@ -59,15 +62,15 @@ def sync_events(source: str, gmail_service, calendar_service) -> None:
     additions = desired_by_source_id.keys() - remote_by_source_id.keys()
     removals = remote_by_source_id.keys() - desired_by_source_id.keys()
 
-    if source == "Timetable":
+    if source == TIMETABLE_SRC:
         sync_classes(additions, removals, desired_by_source_id, remote_by_source_id, calendar_service)
-    if source == "Assessments":
+    if source == ASSESSMENTS_SRC:
         sync_assessments(additions, desired_by_source_id, calendar_service)
 
 def load_events(service, source: str) -> list[Event] | None:
     """Download and parse the newest unread attachment."""
 
-    if source not in ["Timetable", "Assessments"]:
+    if source not in [TIMETABLE_SRC, ASSESSMENTS_SRC]:
         raise ValueError(f"Unknown source: {source}")
 
     message = load_message(service, source)
@@ -104,13 +107,13 @@ def extract_payload(service, message_id: str, source: str) -> list[DataFrame] | 
             pdf_path,
         )
 
-        tbls = rdr.extract_tables(pdf_path) if source == "Timetable" else rdr.extract_tables_fallback(pdf_path)
+        tbls = rdr.extract_tables(pdf_path) if source == TIMETABLE_SRC else rdr.extract_tables_fallback(pdf_path)
         return tbls
 
 def process_events(tbls: list[DataFrame], source: str) -> list[Event]:
     """Process the extracted tables into a list of events."""
 
-    if source == "Timetable":
+    if source == TIMETABLE_SRC:
         week_dfs = rdr.extract_classes(tbls)
         print(f"Extracted {len(week_dfs)} week DataFrames from PDF.")
 
@@ -121,7 +124,7 @@ def process_events(tbls: list[DataFrame], source: str) -> list[Event]:
         print(f"Extracted {len(events)} events:")
         return events
 
-    elif source == "Assessments":
+    elif source == ASSESSMENTS_SRC:
         df = rdr.extract_assessments(tbls)
         print(f"Extracted {len(df)} assessment rows from PDF.")
 
@@ -159,7 +162,7 @@ def sync_classes(additions, removals, desired, remote, calendar_service) -> None
     """Reconcile the latest emailed class timetable with Google Calendar."""
     for source_id in additions:
         event_to_add = desired[source_id]
-        gcal.publish(calendar_service, event_to_add)
+        gcal.publish(calendar_service, source=event_to_add)
         print(
             f"Added event: {event_to_add.title} "
             f"on {event_to_add.start:%Y-%m-%d} "
