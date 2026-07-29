@@ -28,12 +28,19 @@ def get_calendar_service():
     return build("calendar", "v3", credentials=creds)
 
 
-def publish(service, event: Event) -> RemoteEvent:
+def publish(service, source: str, event: Event) -> RemoteEvent:
     """Insert an event and return its local and remote representation."""
+    if source == "timetable":
+        calendar_id = TIMETABLE_CALENDAR_ID
+    elif source == "assessments":
+        calendar_id = ASSESSMENT_CALENDAR_ID
+    else:
+        raise ValueError(f"Unknown source: {source}")
+
     resource = (
         service.events()
         .insert(
-            calendarId=TIMETABLE_CALENDAR_ID,
+            calendarId=calendar_id,
             body=event.to_google(),
         )
         .execute()
