@@ -54,7 +54,7 @@ def sync_events(source: str, gmail_service, calendar_service) -> None:
     first_event = min(event.start for event in parsed_events)
     start_time = first_event.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    remote_events = gcal.get_calendar_events(calendar_service, min_time=start_time)
+    remote_events = gcal.get_calendar_events(calendar_service, source, min_time=start_time)
 
     remote_by_source_id = {item.source_id: item for item in remote_events}
     desired_by_source_id = {item.source_id: item for item in parsed_events}
